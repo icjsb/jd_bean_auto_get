@@ -82,32 +82,30 @@ def captcha_img_box():
             )
 
 
-def maybe_can_login():
+def exactor_code():
     """
     返回验证码
     """
-    while True:
-        # http://selenium-python.readthedocs.org/waits.html
-        WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "#captcha-img"))
-        )
-        try:
-            ele = browser.find_element_by_css_selector('#captcha-img')
-            if not ele.is_displayed():
-                logger.info("captcha is hide!")
-                return ""
-            browser.get_screenshot_as_file(screen_path)
-            crop_img(screen_path, code_path, captcha_img_box())
-            code = tool.image_to_string(
-                Image.open(code_path), lang=lang,
-                builder=pyocr.builders.TextBuilder()
-            )
-            logger.info(u"计算验证码结果是{}".format(code))
-            if len(code) == 4:
-                return code
-        except NoSuchElementException:
+    # http://selenium-python.readthedocs.org/waits.html
+    WebDriverWait(browser, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "#captcha-img"))
+    )
+    try:
+        ele = browser.find_element_by_css_selector('#captcha-img')
+        if not ele.is_displayed():
+            logger.info("captcha is hide!")
             return ""
-        browser.refresh()
+        browser.get_screenshot_as_file(screen_path)
+        crop_img(screen_path, code_path, captcha_img_box())
+        code = tool.image_to_string(
+            Image.open(code_path), lang=lang,
+            builder=pyocr.builders.TextBuilder()
+        )
+        logger.info(u"计算验证码结果是{}".format(code))
+        return code
+    except NoSuchElementException:
+        logger.info(u"没有验证码")
+        return None
 
 
 def try_login(username, pwd, code):
@@ -152,20 +150,24 @@ def main():
     browser.find_element_by_css_selector('.jd-search-icon-login').click()
     try:
         while True:
-            code = maybe_can_login()
+            code = exactor_code()
             # 尝试login
-            if try_login(settings.username, settings.pwd, code):
-                logger.info("登录成功!")
-                sign_and_getBeans()
-                envelope.add_attachment(bean_path)
-                envelope.send(settings.email_host,
-                              login=settings.email_user,
-                              password=settings.email_pwd,
-                              tls=True)
-                logger.info("发送邮件成功!")
-                break
+            if code is None or len(code) == 4:
+                if try_login(settings.username, settings.pwd, code):
+                    logger.info("登录成功!")
+                    sign_and_getBeans()
+                    envelope.add_attachment(bean_path)
+                    envelope.send(settings.email_host,
+                                  login=settings.email_user,
+                                  password=settings.email_pwd,
+                                  tls=True)
+                    logger.info("发送邮件成功!")
+                    break
+                else:
+                    logger.info("登录失败,重试中!")
             else:
-                logger.info("登录失败,重试中!")
+                logger.info("提取验证码失败!")
+            browser.refresh()
 
     except Exception:
         logger.debug(traceback.format_exc())
