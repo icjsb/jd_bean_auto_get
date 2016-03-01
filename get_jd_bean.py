@@ -2,6 +2,9 @@
 import sys
 import time
 import datetime
+import logging
+from logging import handlers
+import traceback
 import pyocr
 import pyocr.builders
 import Image
@@ -16,15 +19,29 @@ from selenium.common.exceptions import NoSuchElementException
 import settings
 
 
+LOG_FILE = 'get_jd_bean.log'
+
+handler = handlers.RotatingFileHandler(
+    LOG_FILE, maxBytes=1024 * 1024, backupCount=5)
+fmt = '%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s'
+
+formatter = logging.Formatter(fmt)
+handler.setFormatter(formatter)
+
+logger = logging.getLogger('main')
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+
 tools = pyocr.get_available_tools()
 if len(tools) == 0:
-    print("No OCR tool found")
+    logging.info("No OCR tool found")
     sys.exit(1)
 # The tools are returned in the recommended order of usage
 tool = tools[0]
 
 langs = tool.get_available_languages()
-print("Available languages: %s" % ", ".join(langs))
+logging.info("Available languages: %s" % ", ".join(langs))
 lang = langs[0]
 
 screen_path = 'screen.png'
@@ -77,7 +94,7 @@ def maybe_can_login():
         try:
             ele = browser.find_element_by_css_selector('#captcha-img')
             if not ele.is_displayed():
-                print("captcha is hide!")
+                logger.info("captcha is hide!")
                 return ""
             browser.get_screenshot_as_file(screen_path)
             crop_img(screen_path, code_path, captcha_img_box())
@@ -85,7 +102,7 @@ def maybe_can_login():
                 Image.open(code_path), lang=lang,
                 builder=pyocr.builders.TextBuilder()
             )
-            print(code)
+            logger.info(u"计算验证码结果是{}".format(code))
             if len(code) == 4:
                 return code
         except NoSuchElementException:
@@ -94,7 +111,7 @@ def maybe_can_login():
 
 
 def try_login(username, pwd, code):
-    print("尝试登录!")
+    logger.info("尝试登录!")
     txt_username = browser.find_element_by_css_selector('.txt-username')
     txt_username.send_keys(username)
     txt_username.send_keys(Keys.RETURN)
@@ -105,22 +122,28 @@ def try_login(username, pwd, code):
         txt_captcha = browser.find_element_by_css_selector('.txt-captcha')
         txt_captcha.send_keys(code)
         txt_captcha.send_keys(Keys.RETURN)
-    browser.get_screenshot_as_file("/tmp/abb.png")
+    browser.get_screenshot_as_file(bean_path)
     browser.find_element_by_css_selector('.btn-login').click()
-    time.sleep(10)
-    print(browser.title)
-    if u'\u767b\u5f55' not in browser.title:
-        return True
-    else:
+    try:
+        ele = WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, ".err-msg")))
+        logger.info(ele.text)
         return False
+    except:
+        logger.info(browser.title)
+        if u'登录' not in browser.title:
+            return True
+        else:
+            return False
 
 
 def sign_and_getBeans():
-    print("去拿豆豆!")
+    logger.info("去拿豆豆!")
     url = 'http://ld.m.jd.com/userBeanHomePage/getLoginUserBean.action'
     browser.get(url)
     browser.find_element_by_css_selector('.state').click()
     browser.get_screenshot_as_file(bean_path)
+    logger.info("拿豆豆成功!")
 
 
 def main():
@@ -132,17 +155,20 @@ def main():
             code = maybe_can_login()
             # 尝试login
             if try_login(settings.username, settings.pwd, code):
-                print("登录成功!")
+                logger.info("登录成功!")
                 sign_and_getBeans()
                 envelope.add_attachment(bean_path)
                 envelope.send(settings.email_host,
                               login=settings.email_user,
                               password=settings.email_pwd,
                               tls=True)
+                logger.info("发送邮件成功!")
                 break
             else:
-                print("登录失败,重试中!")
+                logger.info("登录失败,重试中!")
 
+    except Exception:
+        logger.debug(traceback.format_exc())
     finally:
         browser.quit()
 
