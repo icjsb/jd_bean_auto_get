@@ -8,6 +8,7 @@ pyocr
 selenium
 tesseract
 envelopes
+PIL
 
 ## 使用
 
