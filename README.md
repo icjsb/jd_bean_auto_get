@@ -13,11 +13,15 @@ envelopes
 
 配置 settings.py
 
-username = ''
-pwd = ''
-email_host = ''
-email_user = ''
-email_pwd = ''
+```
+
+username = 
+pwd = 
+email_host = 
+email_user = 
+email_pwd = 
+
+```
 
 运行:
 python get_jd_bean.py
