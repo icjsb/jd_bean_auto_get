@@ -164,7 +164,7 @@ class JDUser(object):
         self._browser.find_element_by_css_selector('.state').click()
         self._browser.get_screenshot_as_file(self.bean_path)
         logger.info("{}拿豆豆成功!".format(self._user))
-        self._browser.refresh()
+        self._browser.get(self.sign_and_get_beans_url)
         total_bean = float(
             self._browser.find_element_by_css_selector(
                 '.my-bean > strong:nth-child(1)').text)
@@ -182,12 +182,9 @@ def main():
         for user, pwd in settings.users:
             user = JDUser(browser, user, pwd)
             if user.login():
-                try:
-                    total_bean = user.sign_and_get_beans()
-                    text_body += '\n{}领取成功!当前京豆:{}'.format(user, total_bean)
-                    user.logout()
-                except NoSuchElementException:
-                    text_body += traceback.format_exc()
+                total_bean = user.sign_and_get_beans()
+                text_body += '\n{}领取成功!当前京豆:{}'.format(user, total_bean)
+                user.logout()
             else:
                 text_body += '\n{}登录失败!'.format(user)
 
