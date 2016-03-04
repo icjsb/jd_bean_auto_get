@@ -4,6 +4,7 @@
 
 ## 安装要求
 **python 2.7**
+
 pyocr
 selenium
 tesseract
@@ -16,11 +17,14 @@ PIL
 
 ```
 
-username = 
-pwd = 
-email_host = 
-email_user = 
-email_pwd = 
+email_host = '***'
+email_user = '***'
+email_pwd = '***'
+
+users = (
+    ('***', '***'),
+)
+
 
 ```
 
