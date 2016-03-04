@@ -182,9 +182,12 @@ def main():
         for user, pwd in settings.users:
             user = JDUser(browser, user, pwd)
             if user.login():
-                total_bean = user.sign_and_get_beans()
-                text_body += '\n{}领取成功!当前京豆:{}'.format(user, total_bean)
-                user.logout()
+                try:
+                    total_bean = user.sign_and_get_beans()
+                    text_body += '\n{}领取成功!当前京豆:{}'.format(user, total_bean)
+                    user.logout()
+                except NoSuchElementException:
+                    text_body += traceback.format_exc()
             else:
                 text_body += '\n{}登录失败!'.format(user)
 
