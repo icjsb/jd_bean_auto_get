@@ -1,5 +1,7 @@
-username = ''
-pwd = ''
-email_host = ''
-email_user = ''
-email_pwd = ''
+email_host = '***'
+email_user = '***'
+email_pwd = '***'
+
+users = (
+    ('***', '***'),
+)
